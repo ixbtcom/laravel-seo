@@ -70,8 +70,17 @@ test('previewify uses the raw title and description', function () {
 });
 
 test('the @seo helper can be used for setting a previewify image', function () {
-	seo()->previewify('blog', 1);
-	blade("@seo(['previewify' => ['blog', ['title' => 'abc', 'excerpt' => 'def']]])");
+    seo()->previewify('blog', 1);
+    blade("@seo(['previewify' => ['blog', ['title' => 'abc', 'excerpt' => 'def']]])");
 
-	expect(seo('image'))->toContain('previewify.app/generate/templates/1');
+    expect(seo('image'))->toContain('previewify.app/generate/templates/1');
+});
+
+test('previewify respects an image modifier returning null', function () {
+    seo()->previewify('blog', 1);
+    seo()->image(modifier: fn (?string $image): ?string => null);
+
+    expect(seo()->previewify('blog'))->toBeNull();
+    expect(seo('image'))->toBeNull();
+    expect(seo()->raw('image'))->toContain('previewify.app/generate/templates/1');
 });

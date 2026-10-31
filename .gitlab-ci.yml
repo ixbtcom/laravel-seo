@@ -51,48 +51,50 @@ check:
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/chialab/php:${W3_PHP_VERSION}
   timeout: 20m
   variables:
-    W3_PHP_VERSION: "8.2"
+    W3_PHP_VERSION: "8.4"
     COMPOSER_ALLOW_SUPERUSER: "1"
     COMPOSER_NO_INTERACTION: "1"
   before_script:
     - php --version
     - php -r 'if (PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION !== getenv("W3_PHP_VERSION")) { fwrite(STDERR, "Unexpected PHP runtime\n"); exit(1); }'
     - |
-      case "$W3_PHP_VERSION" in
-        7.0)
-          w3_composer_version=2.2.25
-          w3_composer_sha=8b3f41253363f0645402d1951d6e7f02adedeef29c16de6074763e463e25c23f
-          ;;
-        *)
-          w3_composer_version=2.10.3
-          w3_composer_sha=7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6
-          ;;
-      esac
-      curl --fail --silent --show-error --location "https://getcomposer.org/download/$w3_composer_version/composer.phar" --output "$CI_PROJECT_DIR/.ci-composer.phar"
-      printf '%s  %s\n' "$w3_composer_sha" "$CI_PROJECT_DIR/.ci-composer.phar" | sha256sum --check --status
+      curl --fail --silent --show-error --location "https://getcomposer.org/download/2.11.1/composer.phar" --output "$CI_PROJECT_DIR/.ci-composer.phar"
+      printf '%s  %s\n' '6f1b891e1d4927d62740276c540fb490e47689e19e102c49e8da849794882f8c' "$CI_PROJECT_DIR/.ci-composer.phar" | sha256sum --check --status
       composer() { php "$CI_PROJECT_DIR/.ci-composer.phar" "$@"; }
       export COMPOSER_HOME="$CI_PROJECT_DIR/.ci-composer-home"
       mkdir -p "$COMPOSER_HOME"
       chmod 0700 "$COMPOSER_HOME"
       composer --version
+    - composer update --prefer-dist --no-interaction --no-progress
+    - composer audit --locked --format=json > composer-audit.json
+  artifacts:
+    when: always
+    paths:
+      - composer-audit.json
+    expire_in: 1 week
 
 tests:
   extends: .php
   parallel:
     matrix:
-      - W3_LARAVEL_VERSION: ["10", "11"]
+      - W3_PHP_VERSION: ["8.4", "8.5"]
   script:
-    - composer require "laravel/framework:^$W3_LARAVEL_VERSION.0" --no-interaction --prefer-dist --no-progress
-    - vendor/bin/pest
+    - composer show laravel/framework
+    - vendor/bin/pest --log-junit junit.xml
+  artifacts:
+    when: always
+    paths:
+      - composer-audit.json
+    reports:
+      junit: junit.xml
+    expire_in: 1 week
 
 phpstan:
   extends: .php
   script:
-    - composer install --prefer-dist --no-interaction --no-progress
     - vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
 style:
   extends: .php
   script:
-    - composer global require friendsofphp/php-cs-fixer --prefer-dist --no-interaction --no-progress
-    - php "$COMPOSER_HOME/vendor/bin/php-cs-fixer" fix --config=.php-cs-fixer.php --dry-run --diff --using-cache=no
+    - vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --dry-run --diff --using-cache=no

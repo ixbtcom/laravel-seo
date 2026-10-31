@@ -26,27 +26,27 @@ use Illuminate\Support\Str;
  */
 class SEOManager
 {
-    /** Value modifiers. */
+    /** @var array<string, callable(string|null): string|null> */
     protected array $modifiers = [];
 
-    /** Default values. */
+    /** @var array<string, string|Closure|null> */
     protected array $defaults = [];
 
-    /** User-configured values. */
+    /** @var array<string, string|Closure|null> */
     protected array $values = [];
 
-    /** List of extensions. */
+    /** @var array<string, bool> */
     protected array $extensions = [
         'twitter' => false,
     ];
 
-    /** Metadata for additional features. */
+    /** @var array<string, mixed> */
     protected array $meta = [];
 
-    /** Extra head tags. */
+    /** @var array<string, string> */
     protected array $tags = [];
 
-    /** Get all used values. */
+    /** @return array<string, string|null> */
     public function all(): array
     {
         return collect($this->getKeys())
@@ -54,13 +54,13 @@ class SEOManager
             ->toArray();
     }
 
-    /** Get a list of used keys. */
+    /** @return array<int, string> */
     protected function getKeys(): array
     {
         return collect([
-                'site', 'title', 'image', 'description', 'url', 'type', 'locale',
-                'twitter.creator', 'twitter.site', 'twitter.title', 'twitter.image', 'twitter.description',
-            ])
+            'site', 'title', 'image', 'description', 'url', 'type', 'locale',
+            'twitter.creator', 'twitter.site', 'twitter.title', 'twitter.image', 'twitter.description',
+        ])
             ->merge(array_keys($this->defaults))
             ->merge(array_keys($this->values))
             ->unique()
@@ -80,7 +80,7 @@ class SEOManager
     }
 
     /** Get a modified value. */
-    protected function modify(string $key): string|null
+    protected function modify(string $key): ?string
     {
         return isset($this->modifiers[$key])
             ? $this->modifiers[$key](value($this->values[$key]))
@@ -90,7 +90,8 @@ class SEOManager
     /**
      * Set one or more values.
      *
-     * @param string|array<string, string> $key
+     * @param  string|array<string, string>  $key
+     * @return ($key is array ? array<string, string|null> : string|null)
      */
     public function set(string|array $key, string|Closure|null $value = null): string|array|null
     {
@@ -115,7 +116,7 @@ class SEOManager
     }
 
     /** Resolve a value. */
-    public function get(string $key): string|null
+    public function get(string $key): ?string
     {
         return isset($this->values[$key])
             ? $this->modify($key)
@@ -125,7 +126,7 @@ class SEOManager
     }
 
     /** Get a value without modifications. */
-    public function raw(string $key): string|null
+    public function raw(string $key): ?string
     {
         return isset($this->values[$key])
             ? value($this->values[$key])
@@ -135,7 +136,7 @@ class SEOManager
     }
 
     /** Configure an extension. */
-    public function extension(string $name, bool $enabled = true, string $view = null): static
+    public function extension(string $name, bool $enabled = true, ?string $view = null): static
     {
         $this->extensions[$name] = $enabled;
 
@@ -146,7 +147,7 @@ class SEOManager
         return $this;
     }
 
-    /** Get a list of enabled extensions. */
+    /** @return array<string, string> */
     public function extensions(): array
     {
         return collect($this->extensions)
@@ -158,8 +159,8 @@ class SEOManager
             ->toArray();
     }
 
-    /** Configure or use Flipp. */
-    public function flipp(string $alias, string|array $data = null): string|static
+    /** @param string|array<string, string|null>|null $data */
+    public function flipp(string $alias, string|array|null $data = null): string|static|null
     {
         if (is_string($data)) {
             $this->meta("flipp.templates.$alias", $data);
@@ -184,8 +185,8 @@ class SEOManager
         return $this->set('image', "https://s.useflipp.com/{$template}.png?s={$signature}&v={$query}");
     }
 
-    /** Configure or use Previewify. */
-    public function previewify(string $alias, int|string|array $data = null): string|static
+    /** @param int|string|array<string, string|null>|null $data */
+    public function previewify(string $alias, int|string|array|null $data = null): string|static|null
     {
         if (is_string($data) || is_int($data)) {
             $this->meta("previewify.templates.$alias", (string) $data);
@@ -231,7 +232,7 @@ class SEOManager
         return $this;
     }
 
-    /** Get all extra head tags. */
+    /** @return array<string, string> */
     public function tags(): array
     {
         return $this->tags;
@@ -240,7 +241,7 @@ class SEOManager
     /** Has a specific tag been set? */
     public function hasRawTag(string $key): bool
     {
-        return isset($this->tags[$key]) && ($this->tags[$key] !== null);
+        return isset($this->tags[$key]);
     }
 
     /** Has a specific meta tag been set? */
@@ -250,7 +251,7 @@ class SEOManager
     }
 
     /** Add a head tag. */
-    public function rawTag(string $key, string $tag = null): static
+    public function rawTag(string $key, ?string $tag = null): static
     {
         $tag ??= $key;
 
@@ -271,11 +272,12 @@ class SEOManager
 
     /**
      * Get or set metadata.
-     * @param string|array $key The key or key-value pair being set.
-     * @param string|array|null $value The value (if a single key is provided).
-     * @return $this|string|null
+     *
+     * @param  string|array<string, string|array<string, mixed>>  $key  The key or key-value pair being set.
+     * @param  string|array<string, mixed>|null  $value  The value (if a single key is provided).
+     * @return $this|string|array<string, mixed>|null
      */
-    public function meta(string|array $key, string|array $value = null): mixed
+    public function meta(string|array $key, string|array|null $value = null): mixed
     {
         if (is_array($key)) {
             /** @var array<string, string> $key */
@@ -295,7 +297,10 @@ class SEOManager
         return $this;
     }
 
-    /** Handle magic method calls. */
+    /**
+     * @param  array<int|string, mixed>  $arguments
+     * @return string|array<string, string|null>|null|static
+     */
     public function __call(string $name, array $arguments): string|array|null|static
     {
         if (isset($this->extensions[$name])) {
@@ -333,8 +338,10 @@ class SEOManager
      *
      * This is the only method whose output (returned values) is wrapped in e()
      * as these values are used in the meta.blade.php file via @seo calls.
+     *
+     * @return array<string, string|null>|string|null
      */
-    public function render(...$args): array|string|null
+    public function render(mixed ...$args): array|string|null
     {
         // Flipp and Previewify support more arguments
         if (in_array($args[0], ['flipp', 'previewify'], true)) {
@@ -368,7 +375,7 @@ class SEOManager
     }
 
     /** Handle magic get. */
-    public function __get(string $key): string|null
+    public function __get(string $key): ?string
     {
         return $this->get(Str::snake($key, '.'));
     }
