@@ -1,5 +1,7 @@
 # Laravel SEO
 
+Этот форк используется с Laravel 13 и PHP 8.4/8.5. Проверки пакета выполняются на Testbench 11, Pest 4 и PHPUnit 12; установка зависимостей сохраняет стандартную блокировку security advisories Composer.
+
 This is a simple and extensible package for improving SEO via meta tags, such as OpenGraph tags.
 
 By default, it uses `<title>` and OpenGraph tags. It also ships with a Twitter extension. You're, of course, free to write your own extensions as needed.
@@ -261,6 +263,8 @@ seo()->previewify('blog');
 ```
 
 The `previewify()` method also returns a signed URL to the image, which lets you use it in other places, such as blog cover images.
+
+Если модификатор `image` возвращает `null`, методы `flipp()` и `previewify()` также возвращают `null`, согласованно с `seo('image')`. Исходный подписанный URL остаётся доступен через `seo()->raw('image')`.
 ```php
 <img alt="@seo('title')" src="@seo('previewify', 'blog')">
 ```

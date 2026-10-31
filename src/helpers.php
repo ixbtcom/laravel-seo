@@ -5,7 +5,11 @@ declare(strict_types=1);
 use ArchTech\SEO\SEOManager;
 
 if (! function_exists('seo')) {
-    function seo(string|array $key = null): SEOManager|string|array|null
+    /**
+     * @param  string|array<string, string>|null  $key
+     * @return SEOManager|string|array<string, string|null>|null
+     */
+    function seo(string|array|null $key = null): SEOManager|string|array|null
     {
         if ($key === null) {
             return app('seo');

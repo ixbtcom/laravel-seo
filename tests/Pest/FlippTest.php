@@ -70,8 +70,17 @@ test('flipp uses the raw title and description', function () {
 });
 
 test('the @seo helper can be used for setting a flipp image', function () {
-	seo()->flipp('blog', 'abcdefg');
-	blade("@seo(['flipp' => ['blog', ['title' => 'abc', 'excerpt' => 'def']]])");
+    seo()->flipp('blog', 'abcdefg');
+    blade("@seo(['flipp' => ['blog', ['title' => 'abc', 'excerpt' => 'def']]])");
 
-	expect(seo('image'))->toContain('s.useflipp.com/abcdefg');
+    expect(seo('image'))->toContain('s.useflipp.com/abcdefg');
+});
+
+test('flipp respects an image modifier returning null', function () {
+    seo()->flipp('blog', 'abcdefg');
+    seo()->image(modifier: fn (?string $image): ?string => null);
+
+    expect(seo()->flipp('blog'))->toBeNull();
+    expect(seo('image'))->toBeNull();
+    expect(seo()->raw('image'))->toContain('s.useflipp.com/abcdefg');
 });
